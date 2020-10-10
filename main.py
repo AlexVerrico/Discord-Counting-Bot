@@ -73,6 +73,14 @@ def create_new_entry(guild_id,
 
 
 # -- Begin Count Master Commands --
+bot.remove_command('help')
+@bot.command(name='help')
+async def count_help(ctx):
+    response = """See https://github.com/AlexVerrico/Discord-Counting-Bot for detailed help info"""
+    await ctx.send(response)
+    return
+
+
 @bot.command(name='wrong_message')
 @commands.has_role("count master")
 async def wrong_message(ctx, *args):
@@ -247,7 +255,7 @@ async def on_message(_message):
     ctx = await bot.get_context(_message)
     if ctx.message.author.bot:
         return
-    if _message.content.startswith('!count'):
+    if str(_message.content).startswith(str(PREFIX)):
         await bot.invoke(ctx)
         return
     connection = sqlite3.connect(DbName)

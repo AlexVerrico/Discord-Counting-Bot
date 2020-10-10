@@ -1,0 +1,4 @@
+venv
+.idea
+count.sqlite
+.env

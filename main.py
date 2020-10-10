@@ -10,8 +10,8 @@ import time
 dbOperations = Queue(maxsize=0)
 
 load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
-PREFIX = "".join((os.getenv('PREFIX'), ' '))
+TOKEN = os.getenv('THE_COUNT_DISCORD_TOKEN')
+PREFIX = "".join((os.getenv('THE_COUNT_PREFIX'), ' '))
 
 bot = commands.Bot(command_prefix=PREFIX)
 # client = discord.Client()

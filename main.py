@@ -282,18 +282,18 @@ async def on_message(_message):
             print(current_count)
             old_count = int(temp[1])
             print(old_count)
-            # if str(ctx.message.author.id) == str(temp[3]):
-            #     print("greedy")
-            #     guild_id, old_count, old_number_of_resets, old_last_user, guild_message, channel_id, log_channel_id, greedy_message = temp
-            #     count = str(0)
-            #     number_of_resets = str(int(old_number_of_resets) + 1)
-            #     last_user = str('')
-            #     dbOperations.put(['update', [guild_id, count, number_of_resets, last_user, guild_message, channel_id,
-            #                                  log_channel_id, greedy_message]])
-            #     await ctx.send(str(temp[7]).replace("{{{user}}}", '<@%s>' % str(ctx.message.author.id)))
-            #     channel = bot.get_channel(int(temp[6]))
-            #     await channel.send('<@%s> lost the count when it was at %s' % (ctx.message.author.id, old_count))
-            #     return
+            if str(ctx.message.author.id) == str(temp[3]):
+                print("greedy")
+                guild_id, old_count, old_number_of_resets, old_last_user, guild_message, channel_id, log_channel_id, greedy_message = temp
+                count = str(0)
+                number_of_resets = str(int(old_number_of_resets) + 1)
+                last_user = str('')
+                dbOperations.put(['update', [guild_id, count, number_of_resets, last_user, guild_message, channel_id,
+                                             log_channel_id, greedy_message]])
+                await ctx.send(str(temp[7]).replace("{{{user}}}", '<@%s>' % str(ctx.message.author.id)))
+                channel = bot.get_channel(int(temp[6]))
+                await channel.send('<@%s> lost the count when it was at %s' % (ctx.message.author.id, old_count))
+                return
             if old_count + 1 != current_count:
                 guild_id, old_count, old_number_of_resets, old_last_user, guild_message, channel_id, log_channel_id, greedy_message = temp
                 count = str(0)

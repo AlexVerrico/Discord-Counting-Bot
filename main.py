@@ -2,12 +2,12 @@ import sqlite3
 import os
 from dotenv import load_dotenv
 from discord.ext import commands
-import discord
-from queue import Queue
-import threading
-import time
+# import discord
+# from queue import Queue
+# import threading
+# import time
 
-dbOperations = Queue(maxsize=0)
+# dbOperations = Queue(maxsize=0)
 
 load_dotenv()
 TOKEN = os.getenv('THE_COUNT_DISCORD_TOKEN')
@@ -19,15 +19,18 @@ bot = commands.Bot(command_prefix=PREFIX)
 DbName = 'count.sqlite'
 count_info_headers = ['guild_id', 'current_count', 'number_of_resets', 'last_user', 'message', 'channel_id', 'log_channel_id', 'greedy_message']
 
+connection = sqlite3.connect(DbName)
+cursor = connection.cursor()
+
 
 # -- Begin SQL Helper Functions --
 def create_table(dbname, tablename, tableheader):
     try:
-        connection = sqlite3.connect(dbname)
-        cursor = connection.cursor()
+        # connection = sqlite3.connect(dbname)
+        # cursor = connection.cursor()
         cursor.execute("CREATE TABLE %s%s" % (tablename, tuple(tableheader)))
         connection.commit()
-        connection.close()
+        # connection.close()
         return
     except sqlite3.OperationalError:
         return
@@ -35,19 +38,19 @@ def create_table(dbname, tablename, tableheader):
 
 def insert_values_into_table(dbname, tablename, values):
     if os.path.exists(dbname) is True:
-        connection = sqlite3.connect(dbname)
-        cursor = connection.cursor()
+        # connection = sqlite3.connect(dbname)
+        # cursor = connection.cursor()
         cursor.execute("INSERT INTO %s VALUES %s" % (tablename, tuple(values)))
         connection.commit()
-        connection.close()
+        # connection.close()
 
 
 def check_if_table_exists(dbname, tablename, tableheaders):
     try:
-        connection = sqlite3.connect(dbname)
-        cursor = connection.cursor()
+        # connection = sqlite3.connect(dbname)
+        # cursor = connection.cursor()
         cursor.execute("SELECT * FROM %s" % tablename)
-        connection.close()
+        # connection.close()
     except sqlite3.OperationalError:
         create_table(dbname, tablename, tableheaders)
 
@@ -60,13 +63,19 @@ def create_new_entry(guild_id,
                      count_channel_id=str(''),
                      log_channel_id=str(''),
                      greedy_message=str("{{{user}}} was too greedy")):
-    dbOperations.put(['create', [str(guild_id), str(count),
-                                 str(number_of_resets),
-                                 str(last_user),
-                                 str(guild_message),
-                                 str(count_channel_id),
-                                 str(log_channel_id),
-                                 str(greedy_message)]])
+    # dbOperations.put(['create',
+    temp1 = [
+        str(guild_id), str(count),
+        str(number_of_resets),
+        str(last_user),
+        str(guild_message),
+        str(count_channel_id),
+        str(log_channel_id),
+        str(greedy_message)]
+    # ])
+
+    cursor.execute("INSERT INTO count_info %s VALUES %s" % (tuple(count_info_headers), tuple(temp1)))
+    connection.commit()
     return
 
 # -- End SQL Helper Functions --
@@ -74,6 +83,8 @@ def create_new_entry(guild_id,
 
 # -- Begin Count Master Commands --
 bot.remove_command('help')
+
+
 @bot.command(name='help')
 async def count_help(ctx):
     response = """See https://github.com/AlexVerrico/Discord-Counting-Bot for detailed help info"""
@@ -93,11 +104,11 @@ async def wrong_message(ctx, *args):
         await ctx.send(response)
         return
     # print('%s, %s' % (_message, ctx.guild.id))
-    connection = sqlite3.connect(DbName)
-    cursor = connection.cursor()
+    # connection = sqlite3.connect(DbName)
+    # cursor = connection.cursor()
     cursor.execute("SELECT * FROM count_info WHERE guild_id = '%s'" % ctx.guild.id)
     test = cursor.fetchone()
-    connection.close()
+    # connection.close()
     # print(test)
     if test is None:
         # dbOperations.put(['create', [str(ctx.guild.id), str('0'), str('0'), str(''), str(_message), str(ctx.channel.id), str(ctx.channel.id), str('{{{user}}} was too greedy')]])
@@ -107,7 +118,11 @@ async def wrong_message(ctx, *args):
                          guild_message=_message)
     else:
         guild_id, count, number_of_resets, last_user, guild_message, channel_id, log_channel_id, greedy_message = test
-        dbOperations.put(['update', [guild_id, count, number_of_resets, last_user, _message, channel_id, log_channel_id, greedy_message]])
+        # dbOperations.put(['update',
+        temp1 = [guild_id, count, number_of_resets, last_user, _message, channel_id, log_channel_id, greedy_message]
+        # ])
+        cursor.execute("UPDATE count_info SET guild_id = ?, current_count = ?, number_of_resets = ?, last_user = ?, message = ?, channel_id = ?, log_channel_id = ?, greedy_message = ? WHERE guild_id = '%s'" % temp1[0], (temp1[0], temp1[1], temp1[2], temp1[3], temp1[4], temp1[5], temp1[6], temp1[7],))
+        connection.commit()
     # print(bot.get_user(ctx.message.author.id))
     # await ctx.send("<@%s>" % ctx.message.author.id)
     return
@@ -133,11 +148,11 @@ async def greedy_message(ctx, *args):
         await ctx.send(response)
         return
     # print('%s, %s' % (_message, ctx.guild.id))
-    connection = sqlite3.connect(DbName)
-    cursor = connection.cursor()
+    # connection = sqlite3.connect(DbName)
+    # cursor = connection.cursor()
     cursor.execute("SELECT * FROM count_info WHERE guild_id = '%s'" % ctx.guild.id)
     test = cursor.fetchone()
-    connection.close()
+    # connection.close()
     # print(test)
     if test is None:
         # dbOperations.put(['create', [str(ctx.guild.id), str('0'), str('0'), str(''), str(_message), str(ctx.channel.id), str(ctx.channel.id), str('{{{user}}} was too greedy')]])
@@ -147,7 +162,12 @@ async def greedy_message(ctx, *args):
                          greedy_message=_message)
     else:
         guild_id, count, number_of_resets, last_user, guild_message, channel_id, log_channel_id, old_greedy_message = test
-        dbOperations.put(['update', [guild_id, count, number_of_resets, last_user, guild_message, channel_id, log_channel_id, _message]])
+        # dbOperations.put(['update',
+        temp1 = [guild_id, count, number_of_resets, last_user, guild_message, channel_id, log_channel_id, _message]
+        # ])
+
+        cursor.execute("UPDATE count_info SET guild_id = ?, current_count = ?, number_of_resets = ?, last_user = ?, message = ?, channel_id = ?, log_channel_id = ?, greedy_message = ? WHERE guild_id = '%s'" % temp1[0], (temp1[0], temp1[1], temp1[2], temp1[3], temp1[4], temp1[5], temp1[6], temp1[7],))
+        connection.commit()
     # print(bot.get_user(ctx.message.author.id))
     # await ctx.send("<@%s>" % ctx.message.author.id)
     return
@@ -177,11 +197,11 @@ use `!count counting_channel this_channel` to use the channel that you are typin
         channel_id = ctx.channel.id
         # print(channel_id)
     # print('%s, %s' % (_message, ctx.guild.id))
-    connection = sqlite3.connect(DbName)
-    cursor = connection.cursor()
+    # connection = sqlite3.connect(DbName)
+    # cursor = connection.cursor()
     cursor.execute("SELECT * FROM count_info WHERE guild_id = '%s'" % ctx.guild.id)
     test = cursor.fetchone()
-    connection.close()
+    # connection.close()
     # print(test)
     if test is None:
         # dbOperations.put(['create', [str(ctx.guild.id), str('0'), str('0'), str(''), str('{{{user}}} typed the wrong number'), str(channel_id),
@@ -192,7 +212,12 @@ use `!count counting_channel this_channel` to use the channel that you are typin
     else:
         # print("test is not None")
         guild_id, count, number_of_resets, last_user, guild_message, old_channel_id, log_channel_id, greedy_message = test
-        dbOperations.put(['update', [guild_id, count, number_of_resets, last_user, guild_message, channel_id, log_channel_id, greedy_message]])
+        # dbOperations.put(['update',
+        temp1 = [guild_id, count, number_of_resets, last_user, guild_message, channel_id, log_channel_id, greedy_message]
+        # ])
+
+        cursor.execute("UPDATE count_info SET guild_id = ?, current_count = ?, number_of_resets = ?, last_user = ?, message = ?, channel_id = ?, log_channel_id = ?, greedy_message = ? WHERE guild_id = '%s'" % temp1[0], (temp1[0], temp1[1], temp1[2], temp1[3], temp1[4], temp1[5], temp1[6], temp1[7],))
+        connection.commit()
     return
 
 
@@ -220,11 +245,11 @@ use `!count log_channel this_channel` to use the channel that you are typing in
         channel_id = ctx.channel.id
         # print(channel_id)
     # print('%s, %s' % (_message, ctx.guild.id))
-    connection = sqlite3.connect(DbName)
-    cursor = connection.cursor()
+    # connection = sqlite3.connect(DbName)
+    # cursor = connection.cursor()
     cursor.execute("SELECT * FROM count_info WHERE guild_id = '%s'" % ctx.guild.id)
     test = cursor.fetchone()
-    connection.close()
+    # connection.close()
     # print(test)
     if test is None:
         # dbOperations.put(['create', [str(ctx.guild.id), str('0'), str('0'), str(''), str('{{{user}}} typed the wrong number'), str(channel_id),
@@ -235,7 +260,12 @@ use `!count log_channel this_channel` to use the channel that you are typing in
     else:
         # print("test is not None")
         guild_id, count, number_of_resets, last_user, guild_message, old_channel_id, old_log_channel_id, greedy_message = test
-        dbOperations.put(['update', [guild_id, count, number_of_resets, last_user, guild_message, old_channel_id, channel_id, greedy_message]])
+        # dbOperations.put(['update',
+        temp1 = [guild_id, count, number_of_resets, last_user, guild_message, old_channel_id, channel_id, greedy_message]
+        # ])
+
+        cursor.execute("UPDATE count_info SET guild_id = ?, current_count = ?, number_of_resets = ?, last_user = ?, message = ?, channel_id = ?, log_channel_id = ?, greedy_message = ? WHERE guild_id = '%s'" % temp1[0], (temp1[0], temp1[1], temp1[2], temp1[3], temp1[4], temp1[5], temp1[6], temp1[7],))
+        connection.commit()
     return
 
 
@@ -258,11 +288,11 @@ async def on_message(_message):
     if str(_message.content).startswith(str(PREFIX)):
         await bot.invoke(ctx)
         return
-    connection = sqlite3.connect(DbName)
-    cursor = connection.cursor()
+    # connection = sqlite3.connect(DbName)
+    # cursor = connection.cursor()
     cursor.execute("SELECT * FROM count_info WHERE guild_id = '%s'" % _message.guild.id)
     temp = cursor.fetchone()
-    connection.close()
+    # connection.close()
     if temp is None:
         print("ln 143")
         return
@@ -288,8 +318,14 @@ async def on_message(_message):
                 count = str(0)
                 number_of_resets = str(int(old_number_of_resets) + 1)
                 last_user = str('')
-                dbOperations.put(['update', [guild_id, count, number_of_resets, last_user, guild_message, channel_id,
-                                             log_channel_id, greedy_message]])
+                # dbOperations.put(['update',
+                temp1 = [guild_id, count, number_of_resets, last_user, guild_message, channel_id,
+                         log_channel_id, greedy_message]
+                # ])
+
+                cursor.execute("UPDATE count_info SET guild_id = ?, current_count = ?, number_of_resets = ?, last_user = ?, message = ?, channel_id = ?, log_channel_id = ?, greedy_message = ? WHERE guild_id = '%s'" % temp1[0], (temp1[0], temp1[1], temp1[2], temp1[3], temp1[4], temp1[5], temp1[6], temp1[7],))
+                connection.commit()
+
                 await ctx.send(str(temp[7]).replace("{{{user}}}", '<@%s>' % str(ctx.message.author.id)))
                 channel = bot.get_channel(int(temp[6]))
                 await channel.send('<@%s> lost the count when it was at %s' % (ctx.message.author.id, old_count))
@@ -299,7 +335,13 @@ async def on_message(_message):
                 count = str(0)
                 number_of_resets = str(int(old_number_of_resets) + 1)
                 last_user = str('')
-                dbOperations.put(['update', [guild_id, count, number_of_resets, last_user, guild_message, channel_id, log_channel_id, greedy_message]])
+                # dbOperations.put(['update',
+                temp1 = [guild_id, count, number_of_resets, last_user, guild_message, channel_id, log_channel_id, greedy_message]
+                # ])
+
+                cursor.execute("UPDATE count_info SET guild_id = ?, current_count = ?, number_of_resets = ?, last_user = ?, message = ?, channel_id = ?, log_channel_id = ?, greedy_message = ? WHERE guild_id = '%s'" % temp1[0], (temp1[0], temp1[1], temp1[2], temp1[3], temp1[4], temp1[5], temp1[6], temp1[7],))
+                connection.commit()
+
                 await ctx.send(str(temp[4]).replace("{{{user}}}", '<@%s>' % str(ctx.message.author.id)))
                 # await bot.send_message(bot.get_channel(temp[6]), 'test')
                 channel = bot.get_channel(int(temp[6]))
@@ -309,42 +351,48 @@ async def on_message(_message):
                 guild_id, old_count, number_of_resets, old_last_user, guild_message, channel_id, log_channel_id, greedy_message = temp
                 count = str(current_count)
                 last_user = str(ctx.message.author.id)
-                dbOperations.put(['update', [guild_id, count, number_of_resets, last_user, guild_message, channel_id,
-                                             log_channel_id, greedy_message]])
+                # dbOperations.put(['update',
+                temp1 = [guild_id, count, number_of_resets, last_user, guild_message, channel_id,
+                         log_channel_id, greedy_message]
+                # ])
+
+                cursor.execute("UPDATE count_info SET guild_id = ?, current_count = ?, number_of_resets = ?, last_user = ?, message = ?, channel_id = ?, log_channel_id = ?, greedy_message = ? WHERE guild_id = '%s'" % temp1[0], (temp1[0], temp1[1], temp1[2], temp1[3], temp1[4], temp1[5], temp1[6], temp1[7],))
+                connection.commit()
+
                 return
             return
 
 
 # -- Begin General Function Declarations --
-def run_queue():
-    # client.run(TOKEN)
-    while True:
-        if dbOperations.empty() is False:
-            temp = dbOperations.get()
-            # print(temp)
-            connection = sqlite3.connect(DbName)
-            cursor = connection.cursor()
-            if temp[0] == 'create':
-                temp1 = temp[1]
-                # print("temp1 = %s" % temp1)
-                cursor.execute("INSERT INTO count_info%s VALUES %s" % (tuple(count_info_headers), tuple(temp1)))
-                connection.commit()
-                connection.close()
-                del temp
-                del temp1
-                continue
-            elif temp[0] == 'update':
-                # print("temp[0] == update")
-                temp1 = temp[1]
-                cursor.execute("UPDATE count_info SET guild_id = '%s', current_count = '%s', number_of_resets = '%s', last_user = '%s', message = '%s', channel_id = '%s', log_channel_id = '%s', greedy_message = '%s' WHERE guild_id = '%s'" % (temp1[0], temp1[1], temp1[2], temp1[3], temp1[4], temp1[5], temp1[6], temp1[7], temp1[0]))
-                connection.commit()
-                connection.close()
-                del temp
-                del temp1
-                continue
-            else:
-                time.sleep(0.1)
-                continue
+# def run_queue():
+#     # client.run(TOKEN)
+#     while True:
+#         if dbOperations.empty() is False:
+#             temp = dbOperations.get()
+#             # print(temp)
+#             # connection = sqlite3.connect(DbName)
+#             # cursor = connection.cursor()
+#             if temp[0] == 'create':
+#                 temp1 = temp[1]
+#                 # print("temp1 = %s" % temp1)
+#                 cursor.execute("INSERT INTO count_info%s VALUES %s" % (tuple(count_info_headers), tuple(temp1)))
+#                 connection.commit()
+#                 # connection.close()
+#                 del temp
+#                 del temp1
+#                 continue
+#             elif temp[0] == 'update':
+#                 # print("temp[0] == update")
+#                 temp1 = temp[1]
+#                 cursor.execute("UPDATE count_info SET guild_id = '%s', current_count = '%s', number_of_resets = '%s', last_user = '%s', message = '%s', channel_id = '%s', log_channel_id = '%s', greedy_message = '%s' WHERE guild_id = '%s'" % (temp1[0], temp1[1], temp1[2], temp1[3], temp1[4], temp1[5], temp1[6], temp1[7], temp1[0]))
+#                 connection.commit()
+#                 # connection.close()
+#                 del temp
+#                 del temp1
+#                 continue
+#             else:
+#                 time.sleep(0.1)
+#                 continue
 
 # -- End General Function Declarations --
 
@@ -361,8 +409,8 @@ def run_queue():
 
 # -- Begin Initialization code --
 check_if_table_exists(DbName, 'count_info', count_info_headers)
-t = threading.Timer(0, run_queue)
-t.start()
+# t = threading.Timer(0, run_queue)
+# t.start()
 # print("passed_threading")
 bot.run(TOKEN)
 # -- End Initialization code --
